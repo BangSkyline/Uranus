@@ -1,0 +1,22 @@
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:*"],
+      "Resource": ["arn:aws:s3:::user-files/*"],
+      "Condition": {
+        "IpAddress": {"aws:SourceIp": "192.168.2.210"}
+      }
+    },
+    {
+      "Effect": "Deny",
+      "Action": ["s3:*"],
+      "Resource": ["*"],
+      "Condition": {
+        "NotIpAddress": {"aws:SourceIp": "192.168.2.210"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  nextjs:
+    image: uranus:V1
+    ports:
+      - "3000:3000"  # Accessible publiquement pour l'application web
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_USE_SSL=${MINIO_USE_SSL}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    depends_on:
+      - db
+      - minio
+      - redis
+    networks:
+      cosmos.corp:
+        ipv4_address: 192.168.2.210
+        aliases:
+          - uranus
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      cosmos.corp:
+        ipv4_address: 192.168.2.212
+        aliases:
+          - db
+
+  minio:
+    image: minio/minio
+    # Pas d'exposition publique des ports pour sécuriser
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_SERVER_URL=${MINIO_SERVER_URL}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+      - ./uranus-policy.json:/data/uranus-policy.json
+    networks:
+      cosmos.corp:
+        ipv4_address: 192.168.2.211
+        aliases:
+          - minio
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      cosmos.corp:
+        ipv4_address: 192.168.2.213
+        aliases:
+          - redis
+
+volumes:
+  postgres_data:
+  minio_data:
+  redis_data:
+
+networks:
+  cosmos.corp:
+    external: true
+    name: cosmos.corp
